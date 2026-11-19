@@ -1,0 +1,120 @@
+# SGP – Backend (Sistema de Gestión de Prácticas Profesionales)
+
+API REST construida con **FastAPI**, **SQLAlchemy** y **PostgreSQL**, organizada en capas.
+
+## Requisitos
+
+- Python 3.14 (probado con 3.14; versiones cercanas deberían funcionar)
+- PostgreSQL 16 o superior (probado con 18)
+
+## Instalación
+
+```powershell
+cd backend
+python -m venv venv
+venv\Scripts\activate            # Mac/Linux: source venv/bin/activate
+pip install -r requirements.txt
+```
+
+## Base de datos
+
+1. Crear el usuario y la base (ejecutar cada línea por separado, conectado como `postgres`):
+
+```sql
+CREATE USER sgp WITH PASSWORD 'sgp';
+CREATE DATABASE sgp OWNER sgp;
+```
+
+2. Crear el archivo de configuración y generar una clave secreta:
+
+```powershell
+copy .env.example .env
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+Pegar la clave generada en `SECRET_KEY` dentro de `.env`.
+
+3. Crear las tablas y cargar datos de prueba:
+
+```powershell
+alembic upgrade head
+python -m app.seed
+```
+
+## Ejecutar
+
+```powershell
+uvicorn app.main:app --reload
+```
+
+- API: http://localhost:8000
+- Documentación interactiva (Swagger): http://localhost:8000/docs
+
+Usuarios de prueba (contraseña `Clave123!` para todos):
+
+| Rol | Correo |
+|---|---|
+| Estudiante | estudiante@uninorte.edu.co |
+| Empresa | empresa@acme.com |
+| Coordinador | coordinador@uninorte.edu.co |
+| Gestor de incidencias | gestor@uninorte.edu.co |
+
+## Pruebas
+
+Usan una base SQLite en memoria; no tocan PostgreSQL.
+
+```powershell
+python -m pytest -v
+```
+
+## Arquitectura
+
+```
+app/
+├── api/v1/          Presentación: endpoints y permisos por rol
+├── services/        Negocio: reglas, validaciones y máquinas de estado
+├── repositories/    Datos: consultas a la base de datos
+├── models/          Tablas (SQLAlchemy)
+├── schemas/         Formatos de entrada/salida (Pydantic)
+├── notifications/   Alertas internas
+└── core/            Configuración, conexión a BD y seguridad
+```
+
+Regla: el router no contiene lógica de negocio y el repositorio no contiene reglas.
+
+## Migraciones (Alembic)
+
+Tras cambiar un modelo:
+
+```powershell
+alembic revision --autogenerate -m "descripción del cambio"
+alembic upgrade head
+```
+
+Revisar siempre el archivo generado en `alembic/versions/` antes de aplicarlo.
+
+## Módulos y endpoints principales
+
+| Módulo | Endpoints |
+|---|---|
+| Auth | `POST /auth/login`, `GET /auth/me`, `POST /auth/cambiar-password`, `GET /auth/bloqueados`, `PATCH /auth/usuarios/{id}/desbloquear` |
+| Vacantes | `GET/POST /vacantes`, `PUT /vacantes/{id}`, `PATCH /vacantes/{id}/aprobar` y `/rechazar`, `GET /vacantes/{id}/elegibilidad` |
+| Postulaciones | `POST /postulaciones`, `GET /postulaciones/mias`, `GET /vacantes/{id}/postulaciones`, `PATCH /postulaciones/{id}/seleccionar` |
+| Prácticas | `GET /practicas`, `GET /practicas/mias`, `PATCH /practicas/{id}/aprobar` y `/rechazar` |
+| Horas | `POST/GET /practicas/{id}/horas`, `GET /practicas/{id}/progreso`, `PATCH /horas/{id}/confirmar` y `/rechazar` |
+| Incidencias | `POST/GET /incidencias`, `POST /incidencias/{id}/evidencias`, `PATCH /incidencias/{id}/clasificar`, `/escalar` y `/cerrar` |
+| Evaluación y cierre | `POST/GET /practicas/{id}/evaluaciones`, `POST/GET /practicas/{id}/certificado` |
+| Notificaciones | `GET /notificaciones/mias`, `GET /notificaciones/conteo`, `PATCH /notificaciones/{id}/leer`, `PATCH /notificaciones/leer-todas` |
+
+## Flujo de una práctica
+
+```
+vacante pendiente → activa (coordinador) → postulación (estudiante) → selección (empresa)
+→ práctica postulada → aprobada (coordinador) → en_curso (primera jornada de horas)
+→ 100 % de horas confirmadas + evaluación de ambas partes → certificado → cerrada
+```
+
+## Pendiente
+
+- Envío real de correos (hoy las notificaciones son internas).
+- Restablecimiento de contraseña por correo (hoy el coordinador desbloquea cuentas).
