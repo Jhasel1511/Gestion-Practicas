@@ -7,6 +7,7 @@ from app.models.enums import Rol
 
 
 def run():
+    Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     if db.query(Usuario).count():
         print("Ya hay usuarios; no se hace nada.")

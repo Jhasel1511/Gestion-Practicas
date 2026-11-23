@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after {
+    border-color: #EAE8E2;
+  }
+
+  body {
+    @apply bg-[#F5F5F3] text-[#292929] antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5 {
+    @apply text-[#292929] tracking-tight;
+  }
+}
+
+@layer components {
+  .input-base {
+    @apply w-full px-3.5 py-2.5 text-sm rounded-lg border border-[#EAE8E2] 
+           bg-white text-[#292929] placeholder-[#A0A0A0]
+           focus:outline-none focus:ring-2 focus:ring-[#C5A04B]/30 focus:border-[#C5A04B]
+           transition-colors;
+  }
+
+  .label-base {
+    @apply block text-[11px] font-semibold uppercase tracking-widest text-[#777777] mb-1.5;
+  }
+}
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #F5F5F3; }
+::-webkit-scrollbar-thumb { background: #EAE8E2; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #C5A04B; }
+
+/* Print styles for certificate */
+@media print {
+  .no-print { display: none !important; }
+  body { background: white !important; }
+}
