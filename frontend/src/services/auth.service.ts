@@ -1,9 +1,19 @@
 import { api } from './api';
-import { AuthResponse, Usuario } from '../types';
+import { AuthResponse, Usuario, RegistroEstudianteInput, RegistroEmpresaInput } from '../types';
 
 export const authService = {
   async login(email: string, password: string): Promise<AuthResponse> {
     const response = await api.post<AuthResponse>('/api/v1/auth/login', { email, password });
+    return response.data;
+  },
+
+  async registroEstudiante(data: RegistroEstudianteInput): Promise<AuthResponse> {
+    const response = await api.post<AuthResponse>('/api/v1/auth/registro/estudiante', data);
+    return response.data;
+  },
+
+  async registroEmpresa(data: RegistroEmpresaInput): Promise<AuthResponse> {
+    const response = await api.post<AuthResponse>('/api/v1/auth/registro/empresa', data);
     return response.data;
   },
 

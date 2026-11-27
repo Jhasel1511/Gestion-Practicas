@@ -33,3 +33,42 @@ class UsuarioRepository:
     
     def list_bloqueados(self) -> list[Usuario]:
         return list(self.db.scalars(select(Usuario).where(Usuario.bloqueado.is_(True))))
+
+    def list_by_rol(self, rol: Rol) -> list[Usuario]:
+        return list(self.db.scalars(select(Usuario).where(Usuario.rol == rol)))
+
+    def crear_estudiante(self, email: str, password_hash: str, nombre: str,
+                         creditos_cursados: int, promedio: float, semestre: int) -> tuple[Usuario, Estudiante]:
+        usuario = Usuario(email=email, password_hash=password_hash, rol=Rol.ESTUDIANTE)
+        self.db.add(usuario)
+        self.db.flush()
+        estudiante = Estudiante(
+            usuario_id=usuario.id,
+            nombre=nombre,
+            creditos_cursados=creditos_cursados,
+            promedio=promedio,
+            semestre=semestre,
+        )
+        self.db.add(estudiante)
+        self.db.commit()
+        self.db.refresh(usuario)
+        self.db.refresh(estudiante)
+        return usuario, estudiante
+
+    def crear_empresa(self, email: str, password_hash: str, nombre: str,
+                      sector: str, email_contacto: str, telefono: str | None) -> tuple[Usuario, Empresa]:
+        usuario = Usuario(email=email, password_hash=password_hash, rol=Rol.EMPRESA)
+        self.db.add(usuario)
+        self.db.flush()
+        empresa = Empresa(
+            usuario_id=usuario.id,
+            nombre=nombre,
+            sector=sector,
+            email_contacto=email_contacto,
+            telefono=telefono,
+        )
+        self.db.add(empresa)
+        self.db.commit()
+        self.db.refresh(usuario)
+        self.db.refresh(empresa)
+        return usuario, empresa

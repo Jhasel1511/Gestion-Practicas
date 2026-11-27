@@ -22,6 +22,24 @@ export interface AuthResponse {
   nombre?: string | null;
 }
 
+export interface RegistroEstudianteInput {
+  email: string;
+  password: string;
+  nombre: string;
+  semestre: number;
+  creditos_cursados: number;
+  promedio: number;
+}
+
+export interface RegistroEmpresaInput {
+  email: string;
+  password: string;
+  nombre_empresa: string;
+  sector: string;
+  email_contacto: string;
+  telefono: string;
+}
+
 export interface Vacante {
   id: number;
   empresa_id: number;

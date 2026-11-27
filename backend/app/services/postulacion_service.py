@@ -1,7 +1,8 @@
 from fastapi import HTTPException, status
 
-from app.models import Postulacion, Practica, Usuario
-from app.models.enums import EstadoPostulacion, EstadoPractica, EstadoVacante
+from app.models import Empresa, Estudiante, Postulacion, Practica, Usuario
+from app.models.enums import EstadoPostulacion, EstadoPractica, EstadoVacante, Rol
+from app.notifications.service import notificar
 from app.repositories.postulacion_repository import PostulacionRepository
 from app.repositories.usuario_repository import UsuarioRepository
 from app.repositories.vacante_repository import VacanteRepository
@@ -35,6 +36,17 @@ class PostulacionService:
 
         postulacion = Postulacion(vacante_id=vacante_id, estudiante_id=estudiante.id)
         self.repo.add(postulacion)
+
+        # Notificar a la empresa dueña de la vacante
+        empresa = self.repo.db.get(Empresa, vacante.empresa_id)
+        if empresa:
+            notificar(self.repo.db, empresa.usuario_id,
+                      f"El estudiante {estudiante.nombre} se postuló a tu vacante '{vacante.titulo}'.")
+
+        # Notificar al estudiante que se postuló
+        notificar(self.repo.db, usuario.id,
+                  f"Te has postulado con éxito a la vacante '{vacante.titulo}'. La empresa evaluará tu perfil.")
+
         self.repo.commit()
         self.repo.refresh(postulacion)
         return postulacion
@@ -70,6 +82,11 @@ class PostulacionService:
         postulacion.estado = EstadoPostulacion.SELECCIONADA
         for otra in self.repo.list_otras(vacante.id, postulacion.id):
             otra.estado = EstadoPostulacion.DESCARTADA
+            otra_est = self.repo.db.get(Estudiante, otra.estudiante_id)
+            if otra_est:
+                notificar(self.repo.db, otra_est.usuario_id,
+                          f"El proceso de selección para la vacante '{vacante.titulo}' ha finalizado.")
+
         vacante.estado = EstadoVacante.CERRADA
 
         practica = Practica(
@@ -78,6 +95,19 @@ class PostulacionService:
             estado=EstadoPractica.POSTULADA,  # espera la aprobación del coordinador
         )
         self.repo.add(practica)
+
+        # Notificar al estudiante seleccionado
+        estudiante = self.repo.db.get(Estudiante, postulacion.estudiante_id)
+        empresa = self.usuarios.get_perfil(usuario)
+        if estudiante:
+            notificar(self.repo.db, estudiante.usuario_id,
+                      f"¡Felicidades! La empresa {empresa.nombre} te ha seleccionado para la vacante '{vacante.titulo}'. Tu práctica está en espera de aprobación por Coordinación.")
+
+        # Notificar a los coordinadores sobre la práctica por formalizar
+        for coord in self.usuarios.list_by_rol(Rol.COORDINADOR):
+            notificar(self.repo.db, coord.id,
+                      f"Nueva práctica pendiente de formalización: {estudiante.nombre} en '{vacante.titulo}' ({empresa.nombre}).")
+
         self.repo.commit()  # todo se guarda junto, o nada
         self.repo.refresh(practica)
         return practica

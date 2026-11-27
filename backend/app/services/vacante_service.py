@@ -1,7 +1,8 @@
 from fastapi import HTTPException, status
 
-from app.models import Usuario, Vacante
+from app.models import Empresa, Usuario, Vacante
 from app.models.enums import EstadoVacante, Rol
+from app.notifications.service import notificar
 from app.repositories.usuario_repository import UsuarioRepository
 from app.repositories.vacante_repository import VacanteRepository
 from app.schemas.vacante import ElegibilidadOut, VacanteCreate, VacanteUpdate
@@ -16,7 +17,19 @@ class VacanteService:
         empresa = self.usuarios.get_perfil(usuario)
         vacante = Vacante(**data.model_dump(), empresa_id=empresa.id,
                           estado=EstadoVacante.PENDIENTE)
-        return self.repo.save(vacante)
+        vacante = self.repo.save(vacante)
+
+        # Notificar a la empresa
+        notificar(self.repo.db, usuario.id,
+                  f"Tu vacante '{vacante.titulo}' ha sido registrada y enviada a revisión por Coordinación.")
+        
+        # Notificar a coordinadores
+        for coord in self.usuarios.list_by_rol(Rol.COORDINADOR):
+            notificar(self.repo.db, coord.id,
+                      f"Nueva vacante pendiente de revisión: '{vacante.titulo}' ({empresa.nombre}).")
+        self.repo.db.commit()
+
+        return vacante
 
     def editar(self, vacante_id: int, data: VacanteUpdate, usuario: Usuario) -> Vacante:
         vacante = self._get_or_404(vacante_id)
@@ -26,7 +39,16 @@ class VacanteService:
         for campo, valor in data.model_dump(exclude_unset=True).items():
             setattr(vacante, campo, valor)
         vacante.estado = EstadoVacante.PENDIENTE  # al editarla, vuelve a revisión
-        return self.repo.save(vacante)
+        vacante = self.repo.save(vacante)
+
+        notificar(self.repo.db, usuario.id,
+                  f"Tu vacante '{vacante.titulo}' ha sido editada y enviada a nueva revisión académica.")
+        for coord in self.usuarios.list_by_rol(Rol.COORDINADOR):
+            notificar(self.repo.db, coord.id,
+                      f"Vacante editada pendiente de aprobación: '{vacante.titulo}' ({empresa.nombre}).")
+        self.repo.db.commit()
+
+        return vacante
 
     def listar(self, usuario: Usuario, area: str | None = None,
                estado: EstadoVacante | None = None, skip: int = 0, limit: int = 50) -> list[Vacante]:
@@ -43,7 +65,19 @@ class VacanteService:
     def revisar(self, vacante_id: int, aprobar: bool) -> Vacante:
         vacante = self._get_or_404(vacante_id)
         vacante.estado = EstadoVacante.ACTIVA if aprobar else EstadoVacante.RECHAZADA
-        return self.repo.save(vacante)
+        vacante = self.repo.save(vacante)
+
+        empresa = self.repo.db.get(Empresa, vacante.empresa_id)
+        if empresa:
+            if aprobar:
+                notificar(self.repo.db, empresa.usuario_id,
+                          f"¡Tu vacante '{vacante.titulo}' ha sido aprobada por Coordinación y ya está visible para los estudiantes!")
+            else:
+                notificar(self.repo.db, empresa.usuario_id,
+                          f"Tu vacante '{vacante.titulo}' fue rechazada por Coordinación.")
+            self.repo.db.commit()
+
+        return vacante
 
     def elegibilidad(self, vacante_id: int, usuario: Usuario) -> ElegibilidadOut:
         vacante = self._get_or_404(vacante_id)

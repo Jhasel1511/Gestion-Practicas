@@ -9,6 +9,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  registroEstudiante: (data: import('../types').RegistroEstudianteInput) => Promise<void>;
+  registroEmpresa: (data: import('../types').RegistroEmpresaInput) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -51,12 +53,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     const data = await authService.login(email, password);
+    handleAuthSuccess(data, email);
+  };
+
+  const handleAuthSuccess = async (data: import('../types').AuthResponse, fallbackEmail: string) => {
     localStorage.setItem('sgp_token', data.access_token);
     localStorage.setItem('sgp_role', data.rol);
     setToken(data.access_token);
     setRole(data.rol);
 
-    // Obtener datos detallados del usuario
     try {
       const userData = await authService.getMe();
       const enrichedUser = {
@@ -68,13 +73,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {
       const basicUser: Usuario = {
         id: 0,
-        email,
+        email: fallbackEmail,
         rol: data.rol,
-        nombre: data.nombre || email.split('@')[0],
+        nombre: data.nombre || fallbackEmail.split('@')[0],
       };
       setUser(basicUser);
       localStorage.setItem('sgp_user', JSON.stringify(basicUser));
     }
+  };
+
+  const registroEstudiante = async (data: import('../types').RegistroEstudianteInput) => {
+    const res = await authService.registroEstudiante(data);
+    await handleAuthSuccess(res, data.email);
+  };
+
+  const registroEmpresa = async (data: import('../types').RegistroEmpresaInput) => {
+    const res = await authService.registroEmpresa(data);
+    await handleAuthSuccess(res, data.email);
   };
 
   const logout = () => {
@@ -105,6 +120,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!token,
         isLoading,
         login,
+        registroEstudiante,
+        registroEmpresa,
         logout,
         refreshUser,
       }}

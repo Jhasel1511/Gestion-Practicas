@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Bell,
   CheckCheck,
@@ -8,6 +9,7 @@ import {
   Menu,
   ShieldCheck,
   User,
+  ArrowRight,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { notificacionService } from '../services/notificacion.service';
@@ -23,6 +25,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
+  const navigate = useNavigate();
   const { user, role, logout } = useAuth();
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
@@ -70,6 +73,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleMarcarUna = async (id: number) => {
+    try {
+      await notificacionService.marcarLeida(id);
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+      setNotificaciones((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, leida: true } : n))
+      );
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const handleMarcarTodasLeidas = async () => {
     try {
@@ -173,19 +188,41 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
                     notificaciones.map((notif) => (
                       <div
                         key={notif.id}
-                        className={`p-3 text-xs transition-colors hover:bg-[#FAFAF8] ${
+                        onClick={() => {
+                          if (!notif.leida) handleMarcarUna(notif.id);
+                        }}
+                        className={`p-3 text-xs transition-colors hover:bg-[#FAFAF8] cursor-pointer ${
                           !notif.leida ? 'bg-[#FDFBF4] font-medium' : 'text-[#777777]'
                         }`}
                       >
-                        <p className="leading-relaxed text-[#292929]">{notif.mensaje}</p>
-                        {notif.creada_en && (
-                          <span className="text-[10px] text-[#A0A0A0] block mt-1">
-                            {new Date(notif.creada_en).toLocaleDateString()}
-                          </span>
-                        )}
+                        <div className="flex items-start gap-2">
+                          {!notif.leida && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#C5A04B] mt-1 shrink-0" />
+                          )}
+                          <div className="flex-1">
+                            <p className="leading-relaxed text-[#292929]">{notif.mensaje}</p>
+                            {notif.creada_en && (
+                              <span className="text-[10px] text-[#A0A0A0] block mt-1">
+                                {new Date(notif.creada_en).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     ))
                   )}
+                </div>
+
+                <div className="px-4 py-2 border-t border-[#EAE8E2] bg-[#FAFAF8] text-center">
+                  <button
+                    onClick={() => {
+                      setShowNotifications(false);
+                      navigate('/notificaciones');
+                    }}
+                    className="text-[11px] font-semibold text-[#C5A04B] hover:text-[#8E712B] inline-flex items-center gap-1.5 transition-colors"
+                  >
+                    Ver todas las notificaciones <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             )}

@@ -135,6 +135,17 @@ export const LoginPage: React.FC = () => {
             >
               Ingresar al Sistema
             </Button>
+
+            <div className="pt-3 border-t border-[#EAE8E2] text-center">
+              <span className="text-xs text-[#777777]">¿Aún no tienes una cuenta? </span>
+              <button
+                type="button"
+                onClick={() => navigate('/registro')}
+                className="text-xs font-semibold text-[#C5A04B] hover:underline"
+              >
+                Regístrate aquí
+              </button>
+            </div>
           </form>
 
           {/* Quick switcher */}

@@ -22,6 +22,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         { name: 'Control de Horas', to: '/control-horas', icon: <CalendarCheck className="w-4 h-4" /> },
         { name: 'Incidencias', to: '/incidencias', icon: <ShieldAlert className="w-4 h-4" /> },
         { name: 'Evaluaciones', to: '/evaluaciones', icon: <Award className="w-4 h-4" /> },
+        { name: 'Notificaciones', to: '/notificaciones', icon: <Bell className="w-4 h-4" /> },
       ];
       case 'empresa': return [
         { name: 'Panel Empresa', to: '/dashboard', icon: <Home className="w-4 h-4" /> },
@@ -31,6 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         { name: 'Prácticas Activas', to: '/practicas', icon: <Users className="w-4 h-4" /> },
         { name: 'Evaluaciones', to: '/evaluaciones', icon: <Award className="w-4 h-4" /> },
         { name: 'Incidencias', to: '/incidencias', icon: <ShieldAlert className="w-4 h-4" /> },
+        { name: 'Notificaciones', to: '/notificaciones', icon: <Bell className="w-4 h-4" /> },
       ];
       case 'coordinador': return [
         { name: 'Panel Coordinación', to: '/dashboard', icon: <Home className="w-4 h-4" /> },
